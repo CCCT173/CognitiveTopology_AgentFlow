@@ -35,36 +35,77 @@ The agents developed in this project possess complete capabilities to control co
 
 ### 1. Agent Security Sandbox Levels
 
-The platform provides multi-layer security isolation mechanisms with differentiated isolation strategies based on execution risk levels to ensure code execution safety and reliability.
+The platform provides four-level security isolation mechanisms (L0-L3) with differentiated isolation strategies based on execution risk levels to ensure code execution safety and reliability.
 
 **Sandbox Level Definition**:
 
-| Sandbox Level | Isolation Capability | Use Case | Execution Restrictions |
-|--------------|---------------------|----------|----------------------|
-| **L1 - Basic Sandbox** | AST static check + subprocess isolation | Simple script execution, data processing, Skill execution | Read-only filesystem, restricted network, whitelist standard libraries |
-| **L3 - Advanced Sandbox** | Dedicated venv + workspace isolation | Complex code execution, data science computing, third-party dependencies | Full network access, temporary filesystem, resource limits |
+| Sandbox Level | Isolation Capability | Use Case | Execution Restrictions | Risk Level |
+|--------------|---------------------|----------|----------------------|------------|
+| **L0 - Host Access** | Direct host access | File operations, system command execution | Whitelist directories, sensitive file blocking, HITL confirmation | High/Critical |
+| **L1 - Basic Sandbox** | AST static check + subprocess isolation | Simple script execution, data processing, Skill execution | Filesystem forbidden, network forbidden, whitelist standard libraries | Low |
+| **L2 - Platform Tools** | API-level operations | Workflow operations, Agent management, Skill management | RBAC permission control, operation audit logs | Medium |
+| **L3 - Advanced Sandbox** | Dedicated venv + workspace isolation | Complex code execution, data science computing, third-party dependencies | Full network access, temporary filesystem, resource limits | Medium/High |
+
+**Level Details**:
+
+**L0 - Host Access**:
+- Allows direct access to host filesystem and shell command execution
+- Only whitelist directories allowed (`~/.agentflow` + current project directory)
+- Sensitive files automatically blocked (`.env`, `.ssh`, `.pem`, `.key`, etc.)
+- High-risk operations (write, delete, shell commands) require user confirmation (HITL mechanism)
+- Included tools: `host_read`, `host_write`, `host_edit`, `host_delete`, `host_move`, `host_list_dir`, `host_info`, `host_shell`
+
+**L1 - Basic Sandbox**:
+- AST static check: blocks dangerous module imports (`os`, `sys`, `subprocess`, etc.) and dangerous operations (`eval`, `exec`, `open`, etc.)
+- Subprocess isolation: code runs in independent Python process, auto-terminates on timeout (default 5 seconds)
+- Whitelist standard libraries: only 24 safe modules allowed (`math`, `re`, `json`, `datetime`, etc.)
+- Suitable for Skill code execution and simple data processing
+
+**L2 - Platform Tools**:
+- Operations through platform APIs, constrained by RBAC role permissions
+- Supports workflow create/edit/run, Agent management, Skill management, knowledge base management
+- Role permission matrix: super_admin (all permissions), admin (management permissions), user (own resource permissions)
+- Complete operation audit logs, supporting operation traceability
+
+**L3 - Advanced Sandbox**:
+- Dedicated venv environment: pre-installed data science packages (numpy, pandas, etc.)
+- Workspace isolation: each session has independent workspace directory (`~/.agentflow/ws/{session_id}/`)
+- Workspace API: built-in file operation API with path traversal checks
+- Full network access: supports HTTP requests (via `ws.fetch`)
+- Resource limits: CPU (60 seconds), memory (2GB), process count (100-200), timeout (60 seconds)
 
 **Security Features**:
 
-- **Process Isolation**: Each execution task runs in an independent process space, resources are automatically cleaned up after process termination
+- **Process Isolation**: L1/L3 each execution task runs in an independent process space, resources are automatically cleaned up after process termination
 - **Timeout Protection**: L1 default timeout 5 seconds, L3 default timeout 60 seconds, processes are automatically terminated on timeout
 - **Resource Limits**: CPU, memory, and process count quota control (L3)
-- **Path Security**: L3 Workspace API includes path traversal checks, access to files outside the workspace directory is prohibited
+- **Path Security**: L0/L3 includes path traversal checks, access to files outside whitelist/workspace directory is prohibited
 - **Dangerous Operation Interception**: Blocking system command execution and sensitive file access
+- **HITL Confirmation**: L0 high-risk operations require manual user confirmation
 - **Execution Audit**: Complete execution logs and operation records
 
 **Security Boundaries**:
 
-| Boundary Type | L1 Sandbox | L3 Sandbox |
-|--------------|------------|------------|
-| Filesystem | Forbidden | Workspace directory only |
-| Network Access | Forbidden | HTTP/HTTPS allowed |
-| System Commands | Forbidden | Direct execution forbidden |
-| Standard Libraries | Whitelist (24 safe modules) | Full access |
-| Third-Party Packages | Forbidden | Pre-installed + dynamic installation |
+| Boundary Type | L0 Host | L1 Basic | L2 Platform | L3 Advanced |
+|--------------|---------|----------|-------------|-------------|
+| Filesystem | Whitelist dirs | Forbidden | API level | Workspace only |
+| Network Access | Full | Forbidden | API level | HTTP/HTTPS allowed |
+| System Commands | Allowed (with confirmation) | Forbidden | Forbidden | Direct execution forbidden |
+| Standard Libraries | Full access | Whitelist (24) | - | Full access |
+| Third-Party Packages | Forbidden | Forbidden | - | Pre-installed + dynamic installation |
+| Permission Control | HITL confirmation | Static check | RBAC roles | Workspace API |
 
-**Workspace API** (L3):
+**Core APIs**:
 
+**L0 Host Tools**:
+- `host_read(path)`: Read host file (read-only, no confirmation needed)
+- `host_write(path, content)`: Write host file (high-risk, needs confirmation)
+- `host_edit(path, old_str, new_str)`: Edit file content (high-risk, needs confirmation)
+- `host_delete(path)`: Delete file/empty directory (critical, needs confirmation)
+- `host_list_dir(path)`: List directory contents (read-only, no confirmation needed)
+- `host_shell(command)`: Execute shell command (confirmation depends on command type)
+
+**L3 Workspace API**:
 - `ws.read(path)`: Read file content
 - `ws.write(path, content)`: Write file content
 - `ws.list_dir(path)`: List directory contents
