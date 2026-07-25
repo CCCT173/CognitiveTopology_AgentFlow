@@ -1,0 +1,81 @@
+# AgentFlow 容器编排
+# 启动: docker compose up -d
+# 首次启动会: MySQL 建库 → init_db 自动建表 → 导入默认数据
+
+services:
+  # ===== 后端 =====
+  app:
+    build: .
+    container_name: agentflow-app
+    restart: always
+    ports:
+      - "8001:8001"
+    environment:
+      - APP_ENV=prod
+      - HOST=0.0.0.0
+      - PORT=8001
+      - DATABASE_URL=mysql+pymysql://root:${MYSQL_ROOT_PASSWORD:-agentflow123}@mysql:3306/agentflow?charset=utf8mb4
+      - VECTOR_STORE=milvus_lite
+      - MILVUS_DB_PATH=data/milvus.db
+      # LLM 配置 (修改为你自己的 key)
+      - LLM_PROVIDER=ark
+      - ARK_API_KEY=${ARK_API_KEY:-}
+      - ARK_BASE_URL=https://ark.cn-beijing.volces.com/api/plan/v3
+      - ARK_CHAT_MODEL=doubao-seed-evolving
+      - GITEEAI_API_KEY=${GITEEAI_API_KEY:-}
+      - EMBEDDING_PROVIDER=ark
+      - ARK_EMBEDDING_MODEL=doubao-embedding-vision
+      - RERANKER_PROVIDER=giteeai
+      - RERANKER_MODEL_NAME=Qwen/Qwen3-Reranker-4B
+    volumes:
+      - app_data:/app/data
+      - app_uploads:/app/uploads
+      - app_logs:/app/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ===== 静态文件服务器 (前端) =====
+  # 开发时用 npm run dev, 生产用 nginx serve 前端
+  frontend:
+    image: nginx:alpine
+    container_name: agentflow-frontend
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./web/dist:/usr/share/nginx/html:ro
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+
+  # ===== MySQL =====
+  mysql:
+    image: mysql:8.0
+    container_name: agentflow-mysql
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-agentflow123}
+      - MYSQL_DATABASE=agentflow
+      - MYSQL_CHARACTER_SET_SERVER=utf8mb4
+      - MYSQL_COLLATION_SERVER=utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-agentflow123}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql_data:
+  app_data:
+  app_uploads:
+  app_logs:

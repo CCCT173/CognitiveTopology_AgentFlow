@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# 虚拟环境
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# 环境文件 (用 docker-compose env vars 代替)
+.env
+.env.*
+
+# 测试
+tests/
+.pytest_cache/
+*.pytest_cache
+
+# 前端 (Stage 1 单独构建)
+web/node_modules/
+web/dist/
+
+# 数据目录 (通过 volumes 挂载)
+data/
+uploads/
+logs/
+backups/
+
+# 其他
+*.md
+!requirements.txt
+Dockerfile
+docker-compose.yml
+.dockerignore
+alembic/versions/__pycache__/

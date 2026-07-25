@@ -1,0 +1,123 @@
+{
+  "endpoints": [],
+  "tests": [
+    {
+      "name": "health",
+      "status": "PASS",
+      "ms": 96
+    },
+    {
+      "name": "unauthorized 401",
+      "status": "PASS",
+      "ms": 17
+    },
+    {
+      "name": "auth/me",
+      "status": "PASS",
+      "ms": 21
+    },
+    {
+      "name": "auth refresh + rotation",
+      "status": "PASS",
+      "ms": 276
+    },
+    {
+      "name": "meta/providers",
+      "status": "PASS",
+      "ms": 20
+    },
+    {
+      "name": "workflow CRUD + optimistic lock + version + permission",
+      "status": "PASS",
+      "ms": 259
+    },
+    {
+      "name": "agents list",
+      "status": "PASS",
+      "ms": 29
+    },
+    {
+      "name": "skills list",
+      "status": "PASS",
+      "ms": 30
+    },
+    {
+      "name": "knowledge bases list",
+      "status": "PASS",
+      "ms": 31
+    },
+    {
+      "name": "platform tools registered",
+      "status": "PASS",
+      "ms": 12
+    },
+    {
+      "name": "api key lifecycle + external execute",
+      "status": "PASS",
+      "ms": 249
+    },
+    {
+      "name": "HITL endpoints",
+      "status": "PASS",
+      "ms": 26
+    },
+    {
+      "name": "meta chat sync",
+      "status": "PASS",
+      "ms": 6153
+    },
+    {
+      "name": "meta chat SSE stream",
+      "status": "PASS",
+      "ms": 2540
+    },
+    {
+      "name": "host shell safety",
+      "status": "PASS",
+      "ms": 55
+    },
+    {
+      "name": "L1/L3 sandbox",
+      "status": "PASS",
+      "ms": 206
+    },
+    {
+      "name": "pathguard isolation",
+      "status": "PASS",
+      "ms": 2
+    },
+    {
+      "name": "sanitize module",
+      "status": "PASS",
+      "ms": 1
+    }
+  ],
+  "issues": [],
+  "all_routes": [
+    {
+      "method": "GET",
+      "path": "/docs",
+      "summary": ""
+    },
+    {
+      "method": "GET",
+      "path": "/docs/oauth2-redirect",
+      "summary": ""
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "summary": null
+    },
+    {
+      "method": "GET",
+      "path": "/openapi.json",
+      "summary": ""
+    },
+    {
+      "method": "GET",
+      "path": "/redoc",
+      "summary": ""
+    }
+  ]
+}

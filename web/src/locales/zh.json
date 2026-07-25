@@ -1,0 +1,34 @@
+{
+  "nav": {
+    "home": "首页",
+    "agents": "智能体",
+    "chat": "对话",
+    "rag": "知识库",
+    "language": "语言"
+  },
+  "home": {
+    "title": "多智能体 + RAG 平台",
+    "subtitle": "企业级 Agent & Knowledge Base 控制台",
+    "cardAgents": "智能体管理",
+    "cardAgentsDesc": "创建、配置、启停各类框架与架构的 Agent",
+    "cardChat": "与 Agent 对话",
+    "cardChatDesc": "选择智能体进行多轮对话，支持工具调用",
+    "cardRag": "RAG 资料库",
+    "cardRagDesc": "知识库管理、文档上传与高级检索"
+  },
+  "common": {
+    "create": "新建",
+    "delete": "删除",
+    "edit": "编辑",
+    "save": "保存",
+    "cancel": "取消",
+    "search": "搜索",
+    "send": "发送",
+    "enabled": "启用",
+    "disabled": "禁用",
+    "status": "状态",
+    "actions": "操作",
+    "name": "名称",
+    "description": "描述"
+  }
+}

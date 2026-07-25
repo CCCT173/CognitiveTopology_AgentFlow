@@ -1,0 +1,101 @@
+{
+  "env": {
+    "db": "MySQL (InnoDB) 127.0.0.1:3306/agentflow_perf?charset=utf8mb4",
+    "vector_store": "milvus_lite",
+    "milvus_path": "E:\\PythonProject_Pycharm\\FastAPI_project\\day_17_多agent\\agent搭建平台\\data\\milvus_perf.db",
+    "llm_provider": "ark",
+    "chat_model_default": "doubao-seed-evolving",
+    "embedding_provider": "fake"
+  },
+  "rest_mysql": {
+    "/api/v1/workflows": {
+      "n": 21,
+      "min": 17.85,
+      "median": 19.46,
+      "p95": 21.67,
+      "max": 24.35
+    },
+    "/api/v1/agents": {
+      "n": 21,
+      "min": 16.58,
+      "median": 18.29,
+      "p95": 18.57,
+      "max": 19.72
+    },
+    "/api/v1/rag/kbs": {
+      "n": 21,
+      "min": 18.88,
+      "median": 19.52,
+      "p95": 21.17,
+      "max": 26.31
+    },
+    "/api/v1/groups": {
+      "n": 21,
+      "min": 18.33,
+      "median": 18.98,
+      "p95": 19.68,
+      "max": 21.38
+    },
+    "/api/v1/skills": {
+      "n": 21,
+      "min": 13.09,
+      "median": 16.25,
+      "p95": 20.6,
+      "max": 21.96
+    },
+    "/api/v1/system/apm": {
+      "n": 21,
+      "min": 13.1,
+      "median": 13.75,
+      "p95": 14.84,
+      "max": 15.31
+    },
+    "/health": {
+      "n": 21,
+      "min": 1.43,
+      "median": 1.66,
+      "p95": 1.9,
+      "max": 2.29
+    },
+    "POST /api/v1/auth/login": {
+      "n": 11,
+      "min": 193.0,
+      "median": 255.0,
+      "p95": 265.0,
+      "max": 270.0,
+      "note": "bcrypt 校验主导(~250ms)。脚本内因登录限流 LOGIN_RATE_LIMIT_MAX=5/600s 在多次调用后返回429被快速短路(13ms)，此值为每次清空限流器后实测的真实延迟(已独立验证11次全200/~250ms)。"
+    }
+  },
+  "real_llm": {
+    "doubao-seed-evolving": {
+      "n": 3,
+      "min": 8030.4,
+      "median": 8894.9,
+      "p95": 13630.0,
+      "max": 13630.0,
+      "sample_reply": "我是由字节跳动开发训练的人工智能豆包，具备信息查询、知识科普、创意生成、陪伴交流"
+    },
+    "deepseek-v4-flash": {
+      "n": 3,
+      "min": 4694.3,
+      "median": 4833.2,
+      "p95": 4854.3,
+      "max": 4854.3,
+      "sample_reply": "我是DeepSeek，由深度求索公司创造的免费AI助手，知识截止于2025年5月"
+    }
+  },
+  "e2e_chat": {
+    "/api/v1/meta/chat": {
+      "n": 3,
+      "min": 1489.7,
+      "median": 1898.6,
+      "p95": 2483.7,
+      "max": 2483.7,
+      "sample_replies": [
+        "<200> 好的，我已了解，不会调用任何工具或查询知识库。",
+        "<200> 好的，我会只用一句话直接回复您，请问有什么我可以帮您的吗？",
+        "<200> 好的，我已了解您的要求，请告诉我您需要什么帮助吧。"
+      ]
+    }
+  }
+}

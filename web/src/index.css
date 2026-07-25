@@ -1,0 +1,265 @@
+/* AgentFlow 设计系统 — 现代办公风格
+ * 参考 Coze (#5147FF 冷调紫罗兰) + Dify (#2970FF 清爽蓝) 融合
+ * 浅色背景 + 柔和阴影 + 精致边框 + 微交互
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* ===== 品牌色 ===== */
+  --brand: 41 112 255;          /* #2970FF 主蓝 */
+  --brand-hover: 21 94 235;     /* #155EEB */
+  --brand-active: 13 82 216;    /* #0D52D8 */
+  --brand-subtle: 41 112 255 / 0.08;
+  --brand-subtle-hover: 41 112 255 / 0.12;
+  --brand-subtle-active: 41 112 255 / 0.16;
+
+  /* ===== 背景色（浅色层级）===== */
+  --bg-app: 247 248 250;         /* #F7F8FA 应用背景 */
+  --bg-sidebar: 255 255 255;     /* #FFFFFF 侧边栏 */
+  --bg-card: 255 255 255;        /* #FFFFFF 卡片 */
+  --bg-hover: 243 244 246;       /* #F3F4F6 hover 背景 */
+  --bg-active: 234 236 240;      /* #EAECEF active 背景 */
+  --bg-subtle: 249 250 251;      /* #F9FAFB 次级区域 */
+  --bg-input: 249 250 251;       /* #F9FAFB 输入框底 */
+
+  /* ===== 文字色 ===== */
+  --text-primary: 15 21 40;      /* #0F1528 主文字 */
+  --text-secondary: 75 84 108;   /* #4B546C 次要文字 */
+  --text-tertiary: 154 162 184;  /* #9AA2B8 辅助文字 */
+  --text-placeholder: 174 181 200; /* #AEB5C8 占位符 */
+  --text-disabled: 208 213 220;  /* #D0D5DC 禁用 */
+  --text-brand: 41 112 255;      /* #2970FF 品牌文字 */
+  --text-danger: 217 45 32;      /* #D92D20 危险 */
+  --text-success: 7 148 85;      /* #079455 成功 */
+  --text-warning: 220 104 3;     /* #DC6803 警告 */
+
+  /* ===== 边框 ===== */
+  --border: 234 236 240;         /* #EAECEF 主边框 */
+  --border-strong: 208 213 220;  /* #D0D5DC 强调边框 */
+  --border-input: 208 213 220;   /* #D0D5DC 输入框边框 */
+
+  /* ===== 阴影 ===== */
+  --shadow-xs: 0 1px 2px 0 rgb(16 24 40 / 0.05);
+  --shadow-sm: 0 1px 2px 0 rgb(16 24 40 / 0.06), 0 1px 3px 0 rgb(16 24 40 / 0.1);
+  --shadow-md: 0 4px 6px -2px rgb(16 24 40 / 0.06), 0 8px 24px 0 rgb(16 24 40 / 0.04);
+  --shadow-lg: 0 8px 16px -4px rgb(16 24 40 / 0.08), 0 16px 48px 0 rgb(16 24 40 / 0.06);
+  --shadow-xl: 0 12px 24px -8px rgb(16 24 40 / 0.12), 0 24px 64px 0 rgb(16 24 40 / 0.08);
+
+  /* ===== 圆角 ===== */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+
+  /* ===== 过渡 ===== */
+  --transition-fast: 120ms ease-out;
+  --transition-normal: 200ms ease-out;
+  --transition-slow: 300ms ease-out;
+}
+
+/* ===== 全局 reset ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { font-size: 16px; }
+body {
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: rgb(var(--bg-app));
+  color: rgb(var(--text-primary));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-width: 1200px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ===== 滚动条 ===== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgb(208 213 220 / 0.8);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgb(154 162 184 / 0.8); }
+
+/* ===== 选中文本 ===== */
+::selection { background: rgb(var(--brand-subtle)); }
+
+/* ===== 链接 ===== */
+a { color: rgb(var(--text-brand)); text-decoration: none; }
+
+/* ===== 过渡 ===== */
+* { transition-property: color, background-color, border-color, box-shadow, opacity, transform; }
+* { transition-duration: var(--transition-fast); transition-timing-function: ease-out; }
+
+/* ===== 语义化类 ===== */
+/* 文字 */
+.text-primary { color: rgb(var(--text-primary)); }
+.text-secondary { color: rgb(var(--text-secondary)); }
+.text-tertiary { color: rgb(var(--text-tertiary)); }
+.text-brand { color: rgb(var(--text-brand)); }
+.text-danger { color: rgb(var(--text-danger)); }
+.text-success { color: rgb(var(--text-success)); }
+.text-warning { color: rgb(var(--text-warning)); }
+
+/* 背景 */
+.bg-app { background: rgb(var(--bg-app)); }
+.bg-card { background: rgb(var(--bg-card)); }
+.bg-sidebar { background: rgb(var(--bg-sidebar)); }
+.bg-hover { background: rgb(var(--bg-hover)); }
+.bg-active { background: rgb(var(--bg-active)); }
+.bg-subtle { background: rgb(var(--bg-subtle)); }
+.bg-brand { background: rgb(var(--brand)); }
+.bg-brand-subtle { background: rgb(var(--brand-subtle)); }
+
+/* 边框 */
+.border { border-color: rgb(var(--border)); }
+.border-strong { border-color: rgb(var(--border-strong)); }
+
+/* 阴影 */
+.shadow-xs { box-shadow: var(--shadow-xs); }
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow-md { box-shadow: var(--shadow-md); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
+.shadow-xl { box-shadow: var(--shadow-xl); }
+
+/* 圆角 */
+.rounded-xs { border-radius: var(--radius-xs); }
+.rounded-sm { border-radius: var(--radius-sm); }
+.rounded-md { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-xl { border-radius: var(--radius-xl); }
+.rounded-2xl { border-radius: var(--radius-2xl); }
+
+/* ===== 按钮 ===== */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px; font-weight: 500; font-size: 13px;
+  border-radius: var(--radius-md); cursor: pointer;
+  outline: none; border: none; white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+.btn:focus-visible { outline: 2px solid rgb(var(--brand)); outline-offset: 2px; }
+.btn:disabled { opacity: 0.4; pointer-events: none; box-shadow: none; }
+
+.btn-primary {
+  height: 32px; padding: 0 14px;
+  background: rgb(var(--brand)); color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+.btn-primary:hover { background: rgb(var(--brand-hover)); box-shadow: var(--shadow-md); }
+.btn-primary:active { background: rgb(var(--brand-active)); }
+
+.btn-secondary {
+  height: 32px; padding: 0 14px;
+  background: rgb(var(--bg-card)); color: rgb(var(--text-secondary));
+  border: 1px solid rgb(var(--border));
+}
+.btn-secondary:hover { background: rgb(var(--bg-hover)); border-color: rgb(var(--border-strong)); }
+.btn-secondary:active { background: rgb(var(--bg-active)); }
+
+.btn-ghost {
+  height: 32px; padding: 0 12px;
+  background: transparent; color: rgb(var(--text-secondary));
+}
+.btn-ghost:hover { background: rgb(var(--bg-hover)); color: rgb(var(--text-primary)); }
+
+.btn-danger {
+  height: 32px; padding: 0 14px;
+  background: rgb(var(--text-danger)); color: #fff;
+}
+.btn-danger:hover { opacity: 0.9; }
+
+.btn-sm { height: 26px; padding: 0 10px; font-size: 12px; }
+.btn-lg { height: 36px; padding: 0 18px; font-size: 14px; }
+
+/* ===== 输入框 ===== */
+.input {
+  height: 32px; padding: 0 12px;
+  background: rgb(var(--bg-input));
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: 13px; color: rgb(var(--text-primary));
+  outline: none; width: 100%;
+}
+.input::placeholder { color: rgb(var(--text-placeholder)); }
+.input:hover { border-color: rgb(var(--border-strong)); }
+.input:focus { border-color: rgb(var(--brand)); background: rgb(var(--bg-card)); box-shadow: 0 0 0 3px rgb(var(--brand-subtle)); }
+
+/* ===== 卡片 ===== */
+.card {
+  background: rgb(var(--bg-card));
+  border: 1px solid rgb(var(--border));
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-normal);
+}
+.card:hover { box-shadow: var(--shadow-md); }
+
+/* ===== 标签页 ===== */
+.tab-item {
+  padding: 8px 16px; font-size: 13px; font-weight: 500;
+  color: rgb(var(--text-tertiary)); border-radius: var(--radius-md);
+  cursor: pointer; transition: all var(--transition-fast);
+}
+.tab-item:hover { color: rgb(var(--text-primary)); background: rgb(var(--bg-hover)); }
+.tab-item.active { color: rgb(var(--text-brand)); background: rgb(var(--brand-subtle)); }
+
+/* ===== 徽章 ===== */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; font-size: 11px; font-weight: 500;
+  border-radius: 9999px;
+}
+.badge-blue { background: rgb(var(--brand-subtle)); color: rgb(var(--text-brand)); }
+.badge-green { background: #ECFDF3; color: #079455; }
+.badge-red { background: #FEF3F2; color: #D92D20; }
+.badge-yellow { background: #FFFAEB; color: #DC6803; }
+.badge-gray { background: #F2F4F7; color: #475467; }
+
+/* ===== 分割线 ===== */
+.divider { height: 1px; background: rgb(var(--border)); margin: 12px 0; }
+
+/* ===== 动画 ===== */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+.animate-slideUp { animation: slideUp 0.3s ease-out; }
+.animate-pulse { animation: pulse 2s ease-in-out infinite; }
+.animate-spin { animation: spin 1s linear infinite; }
+
+/* ===== 状态点 ===== */
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot-green { background: #12B76A; }
+.dot-red { background: #F04438; }
+.dot-yellow { background: #F79009; }
+.dot-gray { background: #98A2B3; }
+.dot-blue { background: #2970FF; }
+
+/* ===== 骨架屏 ===== */
+.skeleton {
+  background: linear-gradient(90deg, #F2F4F7 25%, #EAECEF 50%, #F2F4F7 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ===== 工具类补充 ===== */
+.glass {
+  background: rgb(255 255 255 / 0.8);
+  backdrop-filter: blur(12px);
+}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+/* ===== 打印 ===== */
+@media print {
+  body { background: #fff; }
+  .no-print { display: none; }
+}

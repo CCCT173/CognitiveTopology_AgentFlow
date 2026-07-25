@@ -1,0 +1,75 @@
+# 敏感信息
+.env
+.env.*
+.secrets/
+*.secret
+*.key
+*.pem
+*.crt
+
+# 依赖目录
+node_modules/
+venv/
+.env/
+.venv/
+env/
+
+# IDE配置文件
+.idea/
+.vscode/
+.project
+.classpath
+.settings/
+
+# 临时文件及缓存文件
+*.pyc
+__pycache__/
+.pytest_cache/
+.cache/
+*.log
+*.tmp
+*.temp
+
+# 数据文件
+data/
+uploads/
+backups/
+*.db
+*.sqlite
+*.sql
+
+# AI配置文件
+*.ai
+*.model
+*.weights
+*.h5
+*.pt
+
+# Docker
+docker-compose.override.yml
+
+# 构建输出
+dist/
+build/
+*.egg-info/
+
+# OS文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Trae配置
+.trae/
+.workbuddy/
+
+# 测试文件
+tests/__pycache__/
+
+# 临时文件
+_host_*.txt
+
+# 日志目录
+logs/
+
+# 构建信息
+*.tsbuildinfo
