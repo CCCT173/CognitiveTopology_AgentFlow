@@ -18,6 +18,8 @@
 
 **CognitiveTopology** 是一个基于 FastAPI + React 构建的企业级多Agent协作平台，致力于帮助开发者快速构建、部署和管理智能工作流。平台融合了先进的AI技术，支持多种Agent架构模式和可视化工作流编排，为企业提供智能化的业务流程解决方案。
 
+本项目开发的agent具备操控系统核心功能的完整能力，包括但不限于创建子agent实例、设计与执行工作流、管理数据库（含数据的增删改查操作）、管理用户群组及权限分配等关键功能模块。该agent为有经验的专业用户提供了更为高效、直接的系统操作方式，显著提升工作效率。同时，系统内置了多等级安全沙箱机制，通过严格的权限隔离与操作审计，确保核心数据与系统资源的安全性。
+
 ### ✨ 核心价值
 
 - **🎨 可视化工作流**：拖拽式节点编辑器，轻松构建复杂业务流程
@@ -387,7 +389,7 @@ docker-compose logs -f
 
 ## 📞 联系方式
 
-- 📧 邮箱：contact@cognitivetopology.dev
+- 📧 邮箱：1839964900@qq.com
 - 🐙 GitHub：[CCCT173/CognitiveTopology_AgentFlow](https://github.com/CCCT173/CognitiveTopology_AgentFlow)
 - 📚 文档：[项目文档](https://github.com/CCCT173/CognitiveTopology_AgentFlow/wiki)
 

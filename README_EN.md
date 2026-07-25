@@ -18,6 +18,8 @@
 
 **CognitiveTopology** is an enterprise-grade multi-agent collaboration platform built on FastAPI + React, designed to help developers quickly build, deploy, and manage intelligent workflows. The platform integrates advanced AI technologies, supports multiple agent architecture patterns and visual workflow orchestration, providing intelligent business process solutions for enterprises.
 
+The agents developed in this project possess complete capabilities to control core system functions, including but not limited to creating sub-agent instances, designing and executing workflows, managing databases (including CRUD operations), managing user groups and permission assignments, and other key functional modules. These agents provide experienced professional users with a more efficient and direct system operation method, significantly improving work efficiency. Meanwhile, the system incorporates multi-level security sandbox mechanisms, ensuring the security of core data and system resources through strict permission isolation and operation auditing.
+
 ### ✨ Core Value
 
 - **🎨 Visual Workflow**: Drag-and-drop node editor for building complex business processes
@@ -387,7 +389,7 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 
 ## 📞 Contact
 
-- 📧 Email: contact@cognitivetopology.dev
+- 📧 Email: 1839964900@qq.com
 - 🐙 GitHub: [CCCT173/CognitiveTopology_AgentFlow](https://github.com/CCCT173/CognitiveTopology_AgentFlow)
 - 📚 Documentation: [Project Documentation](https://github.com/CCCT173/CognitiveTopology_AgentFlow/wiki)
 
