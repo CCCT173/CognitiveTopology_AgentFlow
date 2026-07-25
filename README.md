@@ -35,88 +35,667 @@
 
 ### 1. Agent安全沙箱体系
 
-平台提供多层安全隔离机制，根据不同的执行风险等级采用差异化的隔离策略：
+平台提供多层安全隔离机制，根据不同的执行风险等级采用差异化的隔离策略，确保代码执行的安全性和可靠性。
+
+#### 1.1 沙箱等级定义
 
 | 沙箱等级 | 隔离能力 | 适用场景 | 执行限制 |
 |---------|---------|---------|---------|
-| **L1 - 基础沙箱** | 代码执行环境隔离 | 简单脚本执行、数据处理 | 文件系统只读、网络受限 |
-| **L3 - 高级沙箱** | 完整容器化隔离 | 复杂代码执行、第三方依赖 | 完整网络访问、临时文件系统 |
+| **L1 - 基础沙箱** | AST静态检查 + 子进程隔离 | 简单脚本执行、数据处理、Skill执行 | 文件系统只读、网络受限、白名单标准库 |
+| **L3 - 高级沙箱** | 专用venv + 工作目录隔离 | 复杂代码执行、数据科学计算、第三方依赖 | 完整网络访问、临时文件系统、资源限制 |
 
-**安全特性**：
-- 🛡️ **进程隔离**：每个执行任务运行在独立进程空间
-- 🔒 **资源限制**：CPU、内存、磁盘IO配额控制
-- 📋 **执行审计**：完整的执行日志和操作记录
-- ⏱️ **超时保护**：自动终止超时执行任务
-- 🚫 **危险操作拦截**：禁止系统命令执行和敏感文件访问
+#### 1.2 实现原理
+
+##### L1 基础沙箱
+
+**核心架构**：
+- **AST静态检查**：在代码执行前进行抽象语法树分析，禁止危险操作
+- **子进程隔离**：代码在独立Python进程中执行，防止影响主进程
+- **白名单机制**：仅允许访问指定的标准库模块和内置函数
+
+**静态检查规则**：
+
+```python
+# 禁止导入的模块
+_FORBIDDEN_IMPORTS = {
+    "os", "sys", "subprocess", "socket", "shutil", "pathlib",
+    "threading", "multiprocessing", "ctypes", "pickle", "marshal",
+    "http", "urllib", "ftplib", "smtplib", "telnetlib", "asyncio",
+    "ssl", "tempfile", "glob", "fnmatch", "webbrowser",
+}
+
+# 禁止访问的属性和函数
+_FORBIDDEN_ATTRS = {
+    "__class__", "__bases__", "__subclasses__", "__mro__", "__globals__",
+    "__import__", "__builtins__", "__dict__", "__getattribute__",
+    "open", "eval", "exec", "compile",
+    "system", "popen", "spawn", "fork", "execve",
+}
+```
+
+**白名单标准库**：
+```python
+ALLOWED_MODULES = {
+    "math", "re", "json", "datetime", "collections", "itertools",
+    "functools", "operator", "string", "textwrap", "numbers",
+    "decimal", "fractions", "random", "statistics", "copy",
+    "pprint", "csv", "hashlib", "base64", "uuid", "time"
+}
+```
+
+**执行流程**：
+1. AST静态检查 → 检测违规导入和危险操作
+2. 创建独立子进程 → 隔离代码执行环境
+3. 白名单限制 → 仅允许访问安全的标准库
+4. 超时监控 → 自动终止超时任务
+5. 结果返回 → 捕获输出并返回给调用方
+
+##### L3 高级沙箱
+
+**核心架构**：
+- **专用venv**：预装numpy、pandas等数据科学包
+- **工作目录隔离**：每个会话有独立的工作目录（`~/.agentflow/ws/{session_id}/`）
+- **Workspace API**：内置文件操作API，带路径越界检查
+- **资源限制**：CPU、内存、进程数等资源配额控制
+- **网络访问**：支持HTTP请求，便于数据获取
+
+**Workspace API**：
+
+| 方法 | 功能 | 参数 |
+|------|------|------|
+| `ws.read(path)` | 读取文件内容 | path: 文件路径 |
+| `ws.write(path, content)` | 写入文件内容 | path: 文件路径, content: 内容 |
+| `ws.list_dir(path)` | 列出目录内容 | path: 目录路径 |
+| `ws.exists(path)` | 检查文件是否存在 | path: 文件路径 |
+| `ws.fetch(url, **kw)` | 发送HTTP请求 | url: 请求地址 |
+| `ws.install_pkg(name)` | 安装pip包 | name: 包名 |
+
+**资源限制配置**（Unix）：
+```python
+import resource
+resource.setrlimit(resource.RLIMIT_CPU, (50, 60))    # CPU限制
+resource.setrlimit(resource.RLIMIT_AS, (2**30, 2**31))  # 内存限制
+resource.setrlimit(resource.RLIMIT_NPROC, (100, 200))   # 进程数限制
+resource.setrlimit(resource.RLIMIT_FSIZE, (100*1024*1024, -1))  # 文件大小限制
+```
+
+#### 1.3 安全边界定义
+
+| 边界类型 | L1沙箱 | L3沙箱 |
+|---------|--------|--------|
+| **文件系统** | 禁止访问 | 仅限工作目录 |
+| **网络访问** | 禁止 | 允许HTTP/HTTPS |
+| **系统命令** | 禁止 | 禁止直接执行 |
+| **进程创建** | 禁止 | 限制进程数 |
+| **内存使用** | 由子进程管理 | 限制2GB |
+| **CPU时间** | 超时5秒 | 限制60秒 |
+| **标准库** | 白名单 | 完整访问 |
+| **第三方包** | 禁止 | 预装包 + 动态安装 |
+
+#### 1.4 权限控制机制
+
+**进程隔离**：
+- 每个执行任务运行在独立进程空间
+- 使用`CREATE_NO_WINDOW`标志（Windows）或等效机制
+- 进程结束后自动清理资源
+
+**超时保护**：
+- L1默认超时：5秒
+- L3默认超时：60秒
+- 超时后自动kill进程并清理
+
+**路径安全**：
+- L3 Workspace API包含路径越界检查
+- 禁止访问工作目录以外的文件
+- 防止路径遍历攻击（`../`）
+
+**包安装安全**：
+- 禁止从git/URL/本地路径安装包
+- 仅允许从PyPI安装标准包
+- 安装过程超时限制：120秒
+
+#### 1.5 异常处理流程
+
+```
+代码提交
+    ↓
+静态检查（L1）
+    ↓
+┌─────────────┐
+│ 检查失败？   │──是──→ 返回违规信息
+└─────────────┘
+    ↓否
+创建子进程
+    ↓
+执行代码
+    ↓
+┌─────────────┐
+│ 超时？       │──是──→ 终止进程，返回超时错误
+└─────────────┘
+    ↓否
+┌─────────────┐
+│ 执行异常？   │──是──→ 捕获异常，返回错误信息
+└─────────────┘
+    ↓否
+返回执行结果
+```
+
+#### 1.6 与系统组件的交互方式
+
+**工作流引擎集成**：
+```python
+from app.sandbox.l1 import run_l1
+from app.sandbox.l3 import run_l3
+
+# 在Code节点中使用L1沙箱
+result = run_l1(code="return len(params)", params={"data": [1,2,3]})
+
+# 在代码解释器中使用L3沙箱
+result = run_l3(code="import pandas; result = pandas.DataFrame({'x': [1,2,3]})", session_id="user_123")
+```
+
+**Skill执行集成**：
+- Skill代码通过L1沙箱执行
+- 支持bundle模式：将多个文件打包后执行
+- 自动检测入口函数（`run`, `main`, `execute`）
+
+**输出回流机制**：
+- 执行结果通过JSON序列化返回
+- 支持stdout/stderr捕获
+- L3支持文件产物回流（最多50个文件）
+
+---
 
 ### 2. 认知拓扑环境全面控制
 
-- 🎯 **环境配置管理**：统一管理LLM参数、API密钥、连接配置
-- 🔄 **配置版本控制**：支持配置方案的保存、加载和切换
-- ⚡ **热更新机制**：配置修改实时生效，无需重启服务
-- 📊 **系统监控**：实时监控系统状态、资源使用和执行指标
-- 🛠️ **运维工具**：提供命令行工具支持自动化运维操作
+#### 2.1 环境配置管理
+
+**配置项分类**：
+
+| 配置类别 | 配置项 | 说明 |
+|---------|-------|------|
+| **应用配置** | APP_NAME, APP_VERSION, APP_ENV, DEBUG | 基础应用设置 |
+| **网络配置** | HOST, PORT | 服务绑定地址 |
+| **认证配置** | JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRE_MINUTES | JWT令牌配置 |
+| **数据库配置** | DATABASE_URL | MySQL连接字符串 |
+| **LLM配置** | LLM_PROVIDER, API_KEY, BASE_URL, MODEL | 大模型服务配置 |
+| **向量库配置** | VECTOR_STORE, MILVUS_HOST, MILVUS_PORT | 向量数据库配置 |
+
+**配置文件结构**（`.env`）：
+```env
+# 应用配置
+APP_NAME=AgentRAG Platform
+APP_VERSION=0.2.0
+APP_ENV=dev
+DEBUG=true
+
+# 数据库配置
+DATABASE_URL=mysql+pymysql://user:password@localhost:3306/db
+
+# LLM配置
+LLM_PROVIDER=ark
+ARK_API_KEY=your_api_key
+```
+
+#### 2.2 配置版本控制
+
+**功能特性**：
+- 支持配置方案的保存、加载和切换
+- 每个配置方案包含完整的参数集合
+- 支持配置方案的导入/导出（JSON格式）
+- 配置变更记录历史，支持回滚
+
+**API接口**：
+```
+GET    /api/v1/meta/system-config    # 获取当前配置
+PATCH  /api/v1/meta/system-config    # 更新配置
+POST   /api/v1/meta/system-config/save    # 保存配置方案
+GET    /api/v1/meta/system-config/list    # 获取配置方案列表
+POST   /api/v1/meta/system-config/load    # 加载配置方案
+```
+
+#### 2.3 热更新机制
+
+**实现原理**：
+- 配置修改通过API实时更新到内存
+- 使用`@lru_cache`缓存配置，更新时清除缓存
+- 无需重启服务，配置立即生效
+
+**代码示例**：
+```python
+from functools import lru_cache
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+    app_name: str = "CognitiveTopology"
+    # ...其他配置项
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+# 更新配置时调用
+def reload_settings():
+    get_settings.cache_clear()
+```
+
+#### 2.4 系统监控
+
+**监控指标**：
+- 系统状态：CPU、内存、磁盘使用
+- API指标：请求数、响应时间、错误率
+- 工作流指标：执行次数、成功率、耗时分布
+- 数据库指标：连接数、查询性能
+
+**监控接口**：
+```
+GET /api/v1/meta/health    # 健康检查
+GET /api/v1/meta/stats     # 系统统计
+GET /api/v1/meta/metrics   # 性能指标
+```
+
+---
 
 ### 3. 子Agent创建与管理
 
-- 👶 **子Agent创建**：基于父Agent创建专用子Agent
-- 🔗 **层级关系**：维护Agent间的父子层级结构
-- 📋 **权限继承**：子Agent继承父Agent的权限配置
-- 🔄 **同步机制**：支持配置变更的层级同步
-- 🧹 **批量管理**：支持子Agent的批量操作和管理
+#### 3.1 子Agent创建
+
+**创建流程**：
+1. 选择父Agent模板
+2. 配置子Agent参数（名称、描述、系统提示词）
+3. 设置继承权限
+4. 创建子Agent实例
+
+**API接口**：
+```
+POST   /api/v1/agents/{parent_id}/sub-agents    # 创建子Agent
+GET    /api/v1/agents/{parent_id}/sub-agents    # 获取子Agent列表
+DELETE /api/v1/agents/{parent_id}/sub-agents/{sub_id}    # 删除子Agent
+```
+
+#### 3.2 层级关系管理
+
+**层级结构**：
+```
+父Agent
+├── 子Agent 1
+│   └── 孙子Agent 1.1
+├── 子Agent 2
+└── 子Agent 3
+```
+
+**权限继承**：
+- 子Agent继承父Agent的权限配置
+- 支持权限覆盖：子Agent可自定义部分权限
+- 权限变更支持层级同步
+
+#### 3.3 批量管理
+
+**批量操作**：
+- 批量创建子Agent
+- 批量更新配置
+- 批量删除（需二次确认）
+
+---
 
 ### 4. 工作流自动化工具
 
-- ⏰ **定时触发**：支持CRON表达式配置定时任务
-- 📡 **事件触发**：基于外部事件触发工作流执行
-- 🔄 **循环处理**：支持循环节点遍历数据集
-- ⚡ **并行执行**：支持多分支并行处理提升效率
-- 📤 **Webhook集成**：支持外部系统通过Webhook触发
-- 📊 **执行追踪**：完整的工作流执行日志和状态追踪
+#### 4.1 定时触发
+
+**CRON表达式支持**：
+```
+# 每天早上8点执行
+0 8 * * *
+
+# 每周一至周五下午6点执行
+0 18 * * 1-5
+
+# 每小时执行一次
+0 * * * *
+```
+
+**API接口**：
+```
+POST /api/v1/workflows/{id}/schedule    # 设置定时任务
+GET  /api/v1/workflows/{id}/schedule    # 获取定时任务
+DELETE /api/v1/workflows/{id}/schedule    # 删除定时任务
+```
+
+#### 4.2 事件触发
+
+**支持的事件类型**：
+- 工作流完成事件
+- 消息到达事件
+- 文件上传事件
+- 定时触发事件
+
+**事件配置**：
+```json
+{
+  "trigger_type": "event",
+  "event_name": "message_received",
+  "conditions": {
+    "channel": "webhook",
+    "min_length": 10
+  }
+}
+```
+
+#### 4.3 Webhook集成
+
+**Webhook配置**：
+```json
+{
+  "url": "https://your-server.com/webhook",
+  "method": "POST",
+  "headers": {
+    "Authorization": "Bearer token"
+  },
+  "retry_policy": {
+    "max_retries": 3,
+    "retry_delay": 5
+  }
+}
+```
+
+#### 4.4 执行追踪
+
+**执行日志结构**：
+```json
+{
+  "workflow_id": "wf_123",
+  "run_id": "run_456",
+  "status": "completed",
+  "start_time": "2026-07-25T10:00:00Z",
+  "end_time": "2026-07-25T10:00:30Z",
+  "duration_ms": 30000,
+  "nodes": [
+    {"node_id": "n1", "status": "success", "duration_ms": 15000},
+    {"node_id": "n2", "status": "success", "duration_ms": 10000},
+    {"node_id": "n3", "status": "success", "duration_ms": 5000}
+  ],
+  "error": null
+}
+```
+
+---
 
 ### 5. 团队协作与管理系统
 
-- 👥 **用户管理**：完整的用户注册、认证和角色管理
-- 👨‍👩‍👧 **群组管理**：支持创建群组并分配成员
-- 📝 **权限控制**：细粒度的资源访问权限管理
-- 🔄 **协作功能**：支持工作流和技能的共享与协作
-- 📋 **版本管理**：资源的版本历史和回滚功能
-- 📈 **乐观锁机制**：并发编辑冲突检测和处理
+#### 5.1 用户管理
+
+**用户模型**：
+```python
+class User(BaseModel):
+    id: str
+    email: str
+    username: str
+    role: str  # admin, manager, user
+    status: str  # active, inactive
+    created_at: datetime
+    updated_at: datetime
+```
+
+**API接口**：
+```
+POST   /api/v1/users    # 创建用户
+GET    /api/v1/users    # 获取用户列表
+GET    /api/v1/users/{id}    # 获取用户详情
+PATCH  /api/v1/users/{id}    # 更新用户
+DELETE /api/v1/users/{id}    # 删除用户
+```
+
+#### 5.2 权限控制
+
+**权限模型**：
+```python
+class Permission(BaseModel):
+    resource_type: str  # workflow, agent, skill, kb
+    resource_id: str
+    user_id: str
+    actions: list[str]  # ["read", "write", "execute", "delete"]
+```
+
+**权限矩阵**：
+
+| 角色 | 工作流 | Agent | Skill | 知识库 | 用户管理 |
+|------|--------|-------|-------|--------|---------|
+| admin | 全部 | 全部 | 全部 | 全部 | 全部 |
+| manager | 全部 | 全部 | 全部 | 全部 | 查看 |
+| user | 读写 | 读写 | 读写 | 读写 | 无 |
+
+#### 5.3 协作功能
+
+**资源共享**：
+- 工作流共享：支持共享给特定用户或群组
+- Skill共享：支持公开/私有/群组共享
+- 知识库共享：支持多用户协同编辑
+
+**版本管理**：
+- 资源版本历史记录
+- 支持版本对比和回滚
+- 乐观锁机制防止并发冲突
+
+---
 
 ### 6. 可视化工作流编辑器
 
-- 🎯 12种节点类型：LLM、工具、Skill、条件、Agent、代码、循环、并行、转换、延迟、开始、结束
-- 🔗 磁吸效果与自动布局调整
-- ⚡ 实时连线编辑和条件配置
-- 🖱️ 右键上下文菜单（复制、删除、重命名）
+#### 6.1 节点类型
+
+| 节点类型 | 功能 | 配置参数 |
+|---------|------|---------|
+| **Start** | 流程起点 | 无 |
+| **End** | 流程终点 | 输出字段、输出格式 |
+| **LLM** | 大模型调用 | Provider、Model、Prompt、Temperature、TopP、MaxTokens |
+| **Tool** | 工具调用 | 工具选择、参数配置 |
+| **Skill** | 技能执行 | Skill选择、参数配置 |
+| **Condition** | 条件判断 | 条件表达式、分支配置 |
+| **Agent** | Agent调用 | Agent选择、消息模板 |
+| **Code** | 代码执行 | 编程语言、代码内容、沙箱等级 |
+| **Loop** | 循环处理 | 遍历变量、最大迭代次数 |
+| **Parallel** | 并行执行 | 分支数、超时时间 |
+| **Transform** | 数据转换 | 转换格式、映射规则 |
+| **Delay** | 延迟等待 | 延迟时长、时间单位 |
+
+#### 6.2 连线配置
+
+**连线类型**：
+- 普通连线：无条件跳转
+- 条件连线：根据条件值跳转
+- 默认连线：无匹配时的默认路径
+
+**连线配置示例**：
+```json
+{
+  "id": "edge_1",
+  "source": "node_1",
+  "target": "node_2",
+  "condition": {
+    "field": "output.status",
+    "operator": "equals",
+    "value": "success"
+  }
+}
+```
+
+#### 6.3 自动布局
+
+**布局算法**：
+- BFS广度优先遍历
+- 从Start节点开始计算层级
+- 自动调整节点位置和连线走向
+
+---
 
 ### 7. 动态参数配置系统
 
-- 📋 8种参数类型：文本、数字、滑块、选择、开关、文本域、JSON、代码
-- 🎯 节点类型专属配置面板
-- 🔄 参数分组、依赖显示、条件渲染
-- ⚡ 实时参数验证和智能提示
+#### 7.1 参数类型
+
+| 参数类型 | 描述 | 输入控件 |
+|---------|------|---------|
+| text | 单行文本 | 文本输入框 |
+| number | 数字 | 数字输入框 |
+| slider | 滑块数值 | 滑块控件 |
+| select | 选择项 | 下拉选择框 |
+| switch | 布尔值 | 开关控件 |
+| textarea | 多行文本 | 文本域 |
+| json | JSON对象 | JSON编辑器 |
+| code | 代码 | 代码编辑器 |
+
+#### 7.2 参数Schema定义
+
+**LLM节点参数Schema**：
+```python
+llm_node_schema = {
+    "provider": {"type": "select", "options": ["ark", "giteeai", "deepseek"]},
+    "model": {"type": "select", "options": ["glm-5.2", "deepseek-chat"]},
+    "system_prompt": {"type": "textarea", "fullWidth": True},
+    "temperature": {"type": "slider", "min": 0, "max": 1, "step": 0.01},
+    "top_p": {"type": "slider", "min": 0, "max": 1, "step": 0.01},
+    "max_tokens": {"type": "number", "min": 100, "max": 8192},
+    "streaming": {"type": "switch", "default": True},
+}
+```
+
+#### 7.3 动态渲染
+
+**渲染流程**：
+1. 根据节点类型获取参数Schema
+2. 根据参数类型选择对应的渲染组件
+3. 支持参数分组显示
+4. 支持依赖显示（根据其他参数值决定是否显示）
+
+---
 
 ### 8. Agent框架
 
-- 🧠 **ReAct模式**：推理+行动的智能决策循环
-- 🔄 **工作流代理**：将工作流封装为Agent
-- 🛠️ **Skill代理**：基于技能的任务执行
-- 📊 **MetaRunner**：多Agent协作编排
+#### 8.1 ReAct模式
+
+**执行循环**：
+```
+思考(Thought) → 行动(Action) → 观察(Observation) → 思考(Thought) → ...
+```
+
+**实现代码**：
+```python
+class ReActAgent(BaseAgent):
+    async def run(self, task: str) -> str:
+        while not self.should_stop():
+            # 思考
+            thought = await self.think(task)
+            
+            # 行动
+            action = await self.select_action(thought)
+            
+            # 执行
+            result = await self.execute_action(action)
+            
+            # 观察
+            observation = self.observe(result)
+            
+            # 更新任务状态
+            task = self.update_task(task, observation)
+        
+        return self.final_answer()
+```
+
+#### 8.2 工作流代理
+
+**封装模式**：
+- 将工作流封装为Agent
+- 通过API接口调用工作流
+- 支持异步执行和结果回调
+
+#### 8.3 MetaRunner
+
+**多Agent协作**：
+- 支持多个Agent协同完成复杂任务
+- 负责Agent间的任务分配和协调
+- 支持任务优先级和依赖关系
+
+---
 
 ### 9. 技能系统
 
-- 📦 技能创建、导入、导出
-- 🧪 技能测试和调试面板
-- 🔄 技能版本管理
-- 📤 技能市场和共享
+#### 9.1 Skill结构
+
+**Skill定义**：
+```python
+class Skill(BaseModel):
+    id: str
+    name: str
+    description: str
+    type: str  # code, api, workflow
+    code: str  # 执行代码
+    params: list[ParamField]  # 参数定义
+    entry: str  # 入口函数名
+    version: str
+```
+
+#### 9.2 Skill执行
+
+**执行流程**：
+1. 解析Skill定义
+2. 验证输入参数
+3. 在L1沙箱中执行代码
+4. 返回执行结果
+
+**API接口**：
+```
+POST   /api/v1/skills    # 创建Skill
+GET    /api/v1/skills    # 获取Skill列表
+GET    /api/v1/skills/{id}    # 获取Skill详情
+PATCH  /api/v1/skills/{id}    # 更新Skill
+DELETE /api/v1/skills/{id}    # 删除Skill
+POST   /api/v1/skills/{id}/execute    # 执行Skill
+POST   /api/v1/skills/{id}/test    # 测试Skill
+```
+
+---
 
 ### 10. RAG知识库
 
-- 📁 文档上传和分块
-- 🔍 向量检索和重排序
-- 📊 知识库管理和统计
-- 🔗 多模态嵌入支持
+#### 10.1 文档处理流程
+
+**处理步骤**：
+1. **上传**：支持PDF、DOCX、TXT等格式
+2. **分块**：按段落/章节分割文档
+3. **嵌入**：使用嵌入模型生成向量
+4. **存储**：存入向量数据库（Milvus）
+
+**分块策略**：
+```python
+# 默认分块配置
+CHUNK_SIZE = 500      # 每个块的token数
+CHUNK_OVERLAP = 50    # 块之间的重叠token数
+```
+
+#### 10.2 向量检索
+
+**检索流程**：
+1. 查询文本嵌入
+2. 向量相似度搜索（Top-K）
+3. 重排序（Reranker）
+4. 返回最相关文档
+
+**检索配置**：
+```python
+# 检索参数
+TOP_K = 10            # 返回前10个结果
+RE_RANK_TOP_K = 3     # 重排序后返回前3个
+SIMILARITY_THRESHOLD = 0.7  # 相似度阈值
+```
+
+#### 10.3 API接口
+
+```
+POST   /api/v1/rag/kbs    # 创建知识库
+GET    /api/v1/rag/kbs    # 获取知识库列表
+POST   /api/v1/rag/kbs/{id}/documents    # 上传文档
+GET    /api/v1/rag/kbs/{id}/documents    # 获取文档列表
+POST   /api/v1/rag/kbs/{id}/search    # 搜索文档
+DELETE /api/v1/rag/kbs/{id}    # 删除知识库
+```
 
 ---
 
@@ -172,15 +751,18 @@
 ├─────────────────────────────────────────────────────────────┤
 │                      AI服务层                               │
 │  LLM Providers | Embedding | Reranker | Tool Execution     │
+├─────────────────────────────────────────────────────────────┤
+│                      安全沙箱层                             │
+│  L1 Sandbox (AST检查+子进程) | L3 Sandbox (venv+工作目录)   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### 竞争优势
 
-- **安全沙箱**：多层隔离架构保障执行安全
-- **可视化编排**：直观的工作流设计体验
-- **动态配置**：灵活的参数配置系统
-- **企业级特性**：完整的权限管理和协作功能
+- **安全沙箱**：多层隔离架构保障执行安全，AST静态检查+子进程隔离
+- **可视化编排**：直观的工作流设计体验，12种节点类型覆盖全场景
+- **动态配置**：灵活的参数配置系统，8种参数类型支持复杂场景
+- **企业级特性**：完整的权限管理和协作功能，支持团队协作
 - **高性能**：异步处理和缓存策略提升响应速度
 
 ---
@@ -322,7 +904,7 @@ docker-compose logs -f
 - 📐 **模块化设计**：清晰的分层架构，易于扩展
 - 🔌 **插件化系统**：支持自定义工具和技能
 - 📡 **异步处理**：支持长任务和后台执行
-- 🛡️ **沙箱隔离**：代码执行安全隔离
+- 🛡️ **沙箱隔离**：代码执行安全隔离（L1/L3双层防护）
 
 ### 性能优化
 - ⚡ **缓存策略**：多级缓存提升响应速度
@@ -335,6 +917,7 @@ docker-compose logs -f
 - 🛡️ **输入验证**：严格的参数校验和过滤
 - 🔑 **API密钥管理**：工作流API密钥生成和管理
 - 📋 **审计日志**：完整的操作记录追踪
+- 🧱 **沙箱隔离**：AST静态检查+子进程隔离
 
 ---
 
