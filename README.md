@@ -37,172 +37,40 @@
 
 平台提供多层安全隔离机制，根据不同的执行风险等级采用差异化的隔离策略，确保代码执行的安全性和可靠性。
 
-#### 1.1 沙箱等级定义
+**沙箱等级定义**：
 
 | 沙箱等级 | 隔离能力 | 适用场景 | 执行限制 |
 |---------|---------|---------|---------|
 | **L1 - 基础沙箱** | AST静态检查 + 子进程隔离 | 简单脚本执行、数据处理、Skill执行 | 文件系统只读、网络受限、白名单标准库 |
 | **L3 - 高级沙箱** | 专用venv + 工作目录隔离 | 复杂代码执行、数据科学计算、第三方依赖 | 完整网络访问、临时文件系统、资源限制 |
 
-#### 1.2 实现原理
+**安全特性**：
 
-##### L1 基础沙箱
+- **进程隔离**：每个执行任务运行在独立进程空间，进程结束后自动清理资源
+- **超时保护**：L1默认超时5秒，L3默认超时60秒，超时后自动终止进程
+- **资源限制**：CPU、内存、进程数等资源配额控制（L3）
+- **路径安全**：L3 Workspace API包含路径越界检查，禁止访问工作目录以外的文件
+- **危险操作拦截**：禁止系统命令执行和敏感文件访问
+- **执行审计**：完整的执行日志和操作记录
 
-**核心架构**：
-- **AST静态检查**：在代码执行前进行抽象语法树分析，禁止危险操作
-- **子进程隔离**：代码在独立Python进程中执行，防止影响主进程
-- **白名单机制**：仅允许访问指定的标准库模块和内置函数
-
-**静态检查规则**：
-
-```python
-# 禁止导入的模块
-_FORBIDDEN_IMPORTS = {
-    "os", "sys", "subprocess", "socket", "shutil", "pathlib",
-    "threading", "multiprocessing", "ctypes", "pickle", "marshal",
-    "http", "urllib", "ftplib", "smtplib", "telnetlib", "asyncio",
-    "ssl", "tempfile", "glob", "fnmatch", "webbrowser",
-}
-
-# 禁止访问的属性和函数
-_FORBIDDEN_ATTRS = {
-    "__class__", "__bases__", "__subclasses__", "__mro__", "__globals__",
-    "__import__", "__builtins__", "__dict__", "__getattribute__",
-    "open", "eval", "exec", "compile",
-    "system", "popen", "spawn", "fork", "execve",
-}
-```
-
-**白名单标准库**：
-```python
-ALLOWED_MODULES = {
-    "math", "re", "json", "datetime", "collections", "itertools",
-    "functools", "operator", "string", "textwrap", "numbers",
-    "decimal", "fractions", "random", "statistics", "copy",
-    "pprint", "csv", "hashlib", "base64", "uuid", "time"
-}
-```
-
-**执行流程**：
-1. AST静态检查 → 检测违规导入和危险操作
-2. 创建独立子进程 → 隔离代码执行环境
-3. 白名单限制 → 仅允许访问安全的标准库
-4. 超时监控 → 自动终止超时任务
-5. 结果返回 → 捕获输出并返回给调用方
-
-##### L3 高级沙箱
-
-**核心架构**：
-- **专用venv**：预装numpy、pandas等数据科学包
-- **工作目录隔离**：每个会话有独立的工作目录（`~/.agentflow/ws/{session_id}/`）
-- **Workspace API**：内置文件操作API，带路径越界检查
-- **资源限制**：CPU、内存、进程数等资源配额控制
-- **网络访问**：支持HTTP请求，便于数据获取
-
-**Workspace API**：
-
-| 方法 | 功能 | 参数 |
-|------|------|------|
-| `ws.read(path)` | 读取文件内容 | path: 文件路径 |
-| `ws.write(path, content)` | 写入文件内容 | path: 文件路径, content: 内容 |
-| `ws.list_dir(path)` | 列出目录内容 | path: 目录路径 |
-| `ws.exists(path)` | 检查文件是否存在 | path: 文件路径 |
-| `ws.fetch(url, **kw)` | 发送HTTP请求 | url: 请求地址 |
-| `ws.install_pkg(name)` | 安装pip包 | name: 包名 |
-
-**资源限制配置**（Unix）：
-```python
-import resource
-resource.setrlimit(resource.RLIMIT_CPU, (50, 60))    # CPU限制
-resource.setrlimit(resource.RLIMIT_AS, (2**30, 2**31))  # 内存限制
-resource.setrlimit(resource.RLIMIT_NPROC, (100, 200))   # 进程数限制
-resource.setrlimit(resource.RLIMIT_FSIZE, (100*1024*1024, -1))  # 文件大小限制
-```
-
-#### 1.3 安全边界定义
+**安全边界**：
 
 | 边界类型 | L1沙箱 | L3沙箱 |
 |---------|--------|--------|
-| **文件系统** | 禁止访问 | 仅限工作目录 |
-| **网络访问** | 禁止 | 允许HTTP/HTTPS |
-| **系统命令** | 禁止 | 禁止直接执行 |
-| **进程创建** | 禁止 | 限制进程数 |
-| **内存使用** | 由子进程管理 | 限制2GB |
-| **CPU时间** | 超时5秒 | 限制60秒 |
-| **标准库** | 白名单 | 完整访问 |
-| **第三方包** | 禁止 | 预装包 + 动态安装 |
+| 文件系统 | 禁止访问 | 仅限工作目录 |
+| 网络访问 | 禁止 | 允许HTTP/HTTPS |
+| 系统命令 | 禁止 | 禁止直接执行 |
+| 标准库 | 白名单（24个安全模块） | 完整访问 |
+| 第三方包 | 禁止 | 预装包 + 动态安装 |
 
-#### 1.4 权限控制机制
+**Workspace API**（L3）：
 
-**进程隔离**：
-- 每个执行任务运行在独立进程空间
-- 使用`CREATE_NO_WINDOW`标志（Windows）或等效机制
-- 进程结束后自动清理资源
-
-**超时保护**：
-- L1默认超时：5秒
-- L3默认超时：60秒
-- 超时后自动kill进程并清理
-
-**路径安全**：
-- L3 Workspace API包含路径越界检查
-- 禁止访问工作目录以外的文件
-- 防止路径遍历攻击（`../`）
-
-**包安装安全**：
-- 禁止从git/URL/本地路径安装包
-- 仅允许从PyPI安装标准包
-- 安装过程超时限制：120秒
-
-#### 1.5 异常处理流程
-
-```
-代码提交
-    ↓
-静态检查（L1）
-    ↓
-┌─────────────┐
-│ 检查失败？   │──是──→ 返回违规信息
-└─────────────┘
-    ↓否
-创建子进程
-    ↓
-执行代码
-    ↓
-┌─────────────┐
-│ 超时？       │──是──→ 终止进程，返回超时错误
-└─────────────┘
-    ↓否
-┌─────────────┐
-│ 执行异常？   │──是──→ 捕获异常，返回错误信息
-└─────────────┘
-    ↓否
-返回执行结果
-```
-
-#### 1.6 与系统组件的交互方式
-
-**工作流引擎集成**：
-```python
-from app.sandbox.l1 import run_l1
-from app.sandbox.l3 import run_l3
-
-# 在Code节点中使用L1沙箱
-result = run_l1(code="return len(params)", params={"data": [1,2,3]})
-
-# 在代码解释器中使用L3沙箱
-result = run_l3(code="import pandas; result = pandas.DataFrame({'x': [1,2,3]})", session_id="user_123")
-```
-
-**Skill执行集成**：
-- Skill代码通过L1沙箱执行
-- 支持bundle模式：将多个文件打包后执行
-- 自动检测入口函数（`run`, `main`, `execute`）
-
-**输出回流机制**：
-- 执行结果通过JSON序列化返回
-- 支持stdout/stderr捕获
-- L3支持文件产物回流（最多50个文件）
+- `ws.read(path)`：读取文件内容
+- `ws.write(path, content)`：写入文件内容
+- `ws.list_dir(path)`：列出目录内容
+- `ws.exists(path)`：检查文件是否存在
+- `ws.fetch(url)`：发送HTTP请求
+- `ws.install_pkg(name)`：安装pip包
 
 ---
 

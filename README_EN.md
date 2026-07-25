@@ -35,19 +35,44 @@ The agents developed in this project possess complete capabilities to control co
 
 ### 1. Agent Security Sandbox Levels
 
-The platform provides multi-layer security isolation mechanisms with differentiated isolation strategies based on execution risk levels:
+The platform provides multi-layer security isolation mechanisms with differentiated isolation strategies based on execution risk levels to ensure code execution safety and reliability.
+
+**Sandbox Level Definition**:
 
 | Sandbox Level | Isolation Capability | Use Case | Execution Restrictions |
 |--------------|---------------------|----------|----------------------|
-| **L1 - Basic Sandbox** | Code execution environment isolation | Simple script execution, data processing | Read-only filesystem, restricted network |
-| **L3 - Advanced Sandbox** | Full containerized isolation | Complex code execution, third-party dependencies | Full network access, temporary filesystem |
+| **L1 - Basic Sandbox** | AST static check + subprocess isolation | Simple script execution, data processing, Skill execution | Read-only filesystem, restricted network, whitelist standard libraries |
+| **L3 - Advanced Sandbox** | Dedicated venv + workspace isolation | Complex code execution, data science computing, third-party dependencies | Full network access, temporary filesystem, resource limits |
 
 **Security Features**:
-- 🛡️ **Process Isolation**: Each execution task runs in an independent process space
-- 🔒 **Resource Limits**: CPU, memory, and disk I/O quota control
-- 📋 **Execution Audit**: Complete execution logs and operation records
-- ⏱️ **Timeout Protection**: Automatic termination of timeout execution tasks
-- 🚫 **Dangerous Operation Interception**: Blocking system command execution and sensitive file access
+
+- **Process Isolation**: Each execution task runs in an independent process space, resources are automatically cleaned up after process termination
+- **Timeout Protection**: L1 default timeout 5 seconds, L3 default timeout 60 seconds, processes are automatically terminated on timeout
+- **Resource Limits**: CPU, memory, and process count quota control (L3)
+- **Path Security**: L3 Workspace API includes path traversal checks, access to files outside the workspace directory is prohibited
+- **Dangerous Operation Interception**: Blocking system command execution and sensitive file access
+- **Execution Audit**: Complete execution logs and operation records
+
+**Security Boundaries**:
+
+| Boundary Type | L1 Sandbox | L3 Sandbox |
+|--------------|------------|------------|
+| Filesystem | Forbidden | Workspace directory only |
+| Network Access | Forbidden | HTTP/HTTPS allowed |
+| System Commands | Forbidden | Direct execution forbidden |
+| Standard Libraries | Whitelist (24 safe modules) | Full access |
+| Third-Party Packages | Forbidden | Pre-installed + dynamic installation |
+
+**Workspace API** (L3):
+
+- `ws.read(path)`: Read file content
+- `ws.write(path, content)`: Write file content
+- `ws.list_dir(path)`: List directory contents
+- `ws.exists(path)`: Check if file exists
+- `ws.fetch(url)`: Send HTTP request
+- `ws.install_pkg(name)`: Install pip package
+
+---
 
 ### 2. Full Operational Control Over Cognitive Topology Environment
 
